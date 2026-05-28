@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoring Harga Pangan — Provinsi Lampung</title>
+    <meta name="description" content="Sistem monitoring dan prediksi harga pangan pokok Provinsi Lampung menggunakan PySpark, LSTM, dan Isolation Forest">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══ Header ═══ -->
+<header class="header">
+    <div class="header-inner">
+        <div class="header-icon">🌾</div>
+        <div class="header-text">
+            <h1>Monitoring Harga Pangan — Provinsi Lampung</h1>
+            <p id="dataset-tagline">Memuat data...</p>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" title="Ganti tema terang/gelap">🌙</button>
+    </div>
+</header>
+
+<!-- ═══ Summary Strip ═══ -->
+<div class="summary-strip" id="summary-strip">
+    <div class="summary-item">
+        <div class="summary-icon">📊</div>
+        <div class="summary-info">
+            <div class="summary-value" id="stat-rows">-</div>
+            <div class="summary-label">Total Data</div>
+        </div>
+    </div>
+    <div class="summary-item">
+        <div class="summary-icon">🏘️</div>
+        <div class="summary-info">
+            <div class="summary-value" id="stat-kabkot">-</div>
+            <div class="summary-label">Kab/Kota</div>
+        </div>
+    </div>
+    <div class="summary-item">
+        <div class="summary-icon">🥬</div>
+        <div class="summary-info">
+            <div class="summary-value" id="stat-kom">-</div>
+            <div class="summary-label">Komoditas</div>
+        </div>
+    </div>
+    <div class="summary-item">
+        <div class="summary-icon">📅</div>
+        <div class="summary-info">
+            <div class="summary-value" id="stat-date">-</div>
+            <div class="summary-label">Periode</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Tabs ═══ -->
+<nav class="tab-nav">
+    <button class="tab-btn active" data-tab="tab-prediksi" id="btn-tab-prediksi">
+        📈 Prediksi Harga
+    </button>
+    <button class="tab-btn" data-tab="tab-anomali" id="btn-tab-anomali">
+        🛡️ Deteksi Anomali
+    </button>
+</nav>
+
+<!-- ═══ Content ═══ -->
+<main class="main-content">
+
+    <!-- TAB 1: Prediksi -->
+    <div class="tab-panel active" id="tab-prediksi">
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">🔮</span>
+                <span class="card-title">Prediksi Harga 7 Hari ke Depan</span>
+            </div>
+            <div class="card-desc">Pilih komoditas untuk melihat proyeksi harga rata-rata provinsi menggunakan LSTM multivariate. Data diproses terlebih dahulu dengan PySpark untuk agregasi, validasi, dan feature engineering.</div>
+
+            <div class="control-bar">
+                <label for="kom-select">Komoditas:</label>
+                <select id="kom-select"></select>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics-strip" id="eval-metrics">
+                <div class="metric-box">
+                    <span class="metric-val" id="metric-mae">-</span>
+                    <span class="metric-name">MAE (Rp)</span>
+                    <div class="metric-hint">Rata-rata selisih harga</div>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-val" id="metric-rmse">-</span>
+                    <span class="metric-name">RMSE (Rp)</span>
+                    <div class="metric-hint">Sensitivitas error besar</div>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-val" id="metric-mape">-</span>
+                    <span class="metric-name">MAPE (%)</span>
+                    <div class="metric-hint">&lt;10% akurat · 10-20% cukup</div>
+                </div>
+            </div>
+
+            <!-- Forecast Cards -->
+            <div class="forecast-grid" id="forecast-row"></div>
+
+            <!-- Chart -->
+            <div class="chart-wrap"><canvas id="chart-forecast"></canvas></div>
+
+            <!-- Table -->
+            <div class="tbl-wrap">
+                <table id="tbl-forecast">
+                    <thead>
+                        <tr>
+                            <th>Hari ke</th>
+                            <th>Tanggal</th>
+                            <th>Prediksi (Rp)</th>
+                            <th>MAE (Rp)</th>
+                            <th>MAPE (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TAB 2: Anomali -->
+    <div class="tab-panel" id="tab-anomali">
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">🛡️</span>
+                <span class="card-title">Deteksi Anomali Harga — Isolation Forest</span>
+            </div>
+            <div class="card-desc">Sistem mendeteksi harga tidak wajar menggunakan fitur deviasi provinsi, perubahan harian, cuaca, kalender, dan skor Isolation Forest. Ambang anomali: estimasi 3% data paling menyimpang.</div>
+
+            <div class="anom-summary">
+                <span id="anom-count" class="anom-badge">Memuat...</span>
+            </div>
+
+            <div class="chart-wrap"><canvas id="chart-anom-daily"></canvas></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">📋</span>
+                <span class="card-title">Data Anomali Teratas</span>
+            </div>
+            <div class="card-desc">Skor semakin negatif menunjukkan data semakin tidak wajar dibandingkan pola umum.</div>
+
+            <div class="tbl-wrap">
+                <table id="tbl-anom">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Kab/Kota</th>
+                            <th>Komoditas</th>
+                            <th>Harga (Rp)</th>
+                            <th>Deviasi (%)</th>
+                            <th>Delta (%)</th>
+                            <th>Hujan (mm)</th>
+                            <th>Libur</th>
+                            <th>Skor</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <button class="btn-toggle" id="btn-toggle-anom" style="display:none;">
+                Tampilkan semua (50 data) ▾
+            </button>
+        </div>
+
+    </div>
+
+</main>
+
+<footer class="footer">
+    Pipeline: PySpark ETL/feature engineering · Model: TensorFlow/Keras LSTM · Deteksi: scikit-learn Isolation Forest · Data: Disperindag Lampung + Open-Meteo · Tugas Besar Mahadata 2026
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
