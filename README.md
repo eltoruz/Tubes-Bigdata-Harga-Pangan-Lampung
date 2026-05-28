@@ -1,4 +1,4 @@
-# Sistem Big Data Analytics Monitoring Harga Pangan Provinsi Lampung
+# Sistem Analitik Big Data untuk Monitoring Harga Komoditas Pangan Pokok dan Deteksi Anomali Distribusi di Provinsi Lampung Berbasis Data Primer Disperindag       
 
 Project ini merupakan tugas besar Mahadata/Big Data untuk membangun prototipe sistem monitoring, prediksi harga, dan deteksi anomali harga komoditas pangan di Provinsi Lampung. Sistem menggunakan data harga pangan harian dari 15 kabupaten/kota, diperkaya dengan data cuaca dan fitur kalender, kemudian diproses melalui pipeline PySpark sebelum masuk ke model analitik.
 
